@@ -1,7 +1,8 @@
 """Minimal LLM clients (stdlib only, so the demo has no extra dependencies).
 
+  * Groq:   OpenAI-compatible Chat Completions (https://api.groq.com/openai/v1), e.g. Llama 3.3 70B
   * Claude: Anthropic Messages API
-  * Grok:   xAI's OpenAI-compatible Chat Completions API (https://api.x.ai/v1)
+  * Sarvam: Bulbul text-to-speech (Hindi, Hinglish and Indian English voices)
 """
 from __future__ import annotations
 
@@ -19,18 +20,18 @@ class LLMError(RuntimeError):
 
 
 def provider() -> str | None:
-    """Which LLM answers open-ended questions: 'claude', 'grok', or None (offline rules)."""
+    """Which LLM answers open-ended questions: 'groq', 'claude', or None (offline rules)."""
     p = config.LLM_PROVIDER
     if p == "rules":
         return None
+    if p == "groq":
+        return "groq" if config.GROQ_API_KEY else None
     if p == "claude":
         return "claude" if config.ANTHROPIC_API_KEY else None
-    if p == "grok":
-        return "grok" if config.XAI_API_KEY else None
+    if config.GROQ_API_KEY:
+        return "groq"
     if config.ANTHROPIC_API_KEY:
         return "claude"
-    if config.XAI_API_KEY:
-        return "grok"
     return None
 
 
@@ -39,12 +40,14 @@ def enabled() -> bool:
 
 
 def model_name() -> str | None:
-    return {"claude": config.ANTHROPIC_MODEL, "grok": config.GROK_MODEL}.get(provider())
+    return {"claude": config.ANTHROPIC_MODEL, "groq": config.GROQ_MODEL}.get(provider())
 
 
 def _post(url: str, body: dict, headers: dict, raw: bool = False):
     req = urllib.request.Request(url, data=json.dumps(body).encode(), method="POST",
-                                 headers={"content-type": "application/json", **headers})
+                                 headers={"content-type": "application/json",
+                                          # Groq sits behind Cloudflare, which rejects Python's default user agent
+                                          "user-agent": "dukaan-sarthi/1.0", **headers})
     try:
         with urllib.request.urlopen(req, timeout=config.LLM_TIMEOUT_S) as r:
             data = r.read()
@@ -66,26 +69,34 @@ def create(system: str, messages: list, tools: list | None = None, max_tokens: i
     return _post(ANTHROPIC_URL, body, {"x-api-key": config.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01"})
 
 
-# ---------------------------------------------------------------- Grok (xAI)
-def grok_chat(messages: list, tools: list | None = None, max_tokens: int = 600) -> dict:
-    """xAI Chat Completions (OpenAI-compatible). `messages` uses OpenAI roles: system/user/assistant/tool."""
-    if not config.XAI_API_KEY:
-        raise LLMError("XAI_API_KEY is not set")
-    body = {"model": config.GROK_MODEL, "messages": messages, "max_tokens": max_tokens}
+# ---------------------------------------------------------------- Groq
+def groq_chat(messages: list, tools: list | None = None, max_tokens: int = 700) -> dict:
+    """Groq Chat Completions (OpenAI-compatible). `messages` uses OpenAI roles: system/user/assistant/tool."""
+    if not config.GROQ_API_KEY:
+        raise LLMError("GROQ_API_KEY is not set")
+    body = {"model": config.GROQ_MODEL, "messages": messages, "max_tokens": max_tokens, "temperature": 0.2}
     if tools:
         body["tools"] = tools
         body["tool_choice"] = "auto"
-    if config.GROK_REASONING_EFFORT:
-        body["reasoning_effort"] = config.GROK_REASONING_EFFORT
-    return _post(config.XAI_BASE_URL.rstrip("/") + "/chat/completions", body,
-                 {"authorization": f"Bearer {config.XAI_API_KEY}"})
+    return _post(config.GROQ_BASE_URL.rstrip("/") + "/chat/completions", body,
+                 {"authorization": f"Bearer {config.GROQ_API_KEY}"})
 
 
-def grok_tts(text: str, lang: str) -> bytes:
-    """xAI text-to-speech: returns MP3 bytes. `lang` is a BCP-47 code ('hi', 'en')."""
-    if not config.XAI_API_KEY:
-        raise LLMError("XAI_API_KEY is not set")
-    body = {"text": text, "language": lang, "voice_id": config.GROK_TTS_VOICE, "speed": config.GROK_TTS_SPEED,
-            "output_format": {"codec": "mp3", "sample_rate": 24000, "bit_rate": 128000}}
-    return _post(config.XAI_BASE_URL.rstrip("/") + "/tts", body,
-                 {"authorization": f"Bearer {config.XAI_API_KEY}"}, raw=True)
+# ---------------------------------------------------------------- Sarvam (voice)
+SARVAM_TTS_URL = "https://api.sarvam.ai/text-to-speech"
+
+
+def sarvam_tts(text: str, lang: str) -> bytes:
+    """Sarvam Bulbul text-to-speech -> MP3 bytes. `lang` is 'hi' or 'en'."""
+    import base64
+    if not config.SARVAM_API_KEY:
+        raise LLMError("SARVAM_API_KEY is not set")
+    body = {"text": text, "language_code": "en-IN" if lang == "en" else "hi-IN",
+            "model": config.SARVAM_TTS_MODEL,
+            "speaker": config.SARVAM_SPEAKER_EN if lang == "en" else config.SARVAM_SPEAKER_HI,
+            "pace": config.SARVAM_PACE, "speech_sample_rate": 24000, "output_audio_codec": "mp3"}
+    data = _post(SARVAM_TTS_URL, body, {"api-subscription-key": config.SARVAM_API_KEY})
+    audios = data.get("audios") or []
+    if not audios:
+        raise LLMError(f"Sarvam returned no audio: {str(data)[:200]}")
+    return b"".join(base64.b64decode(a) for a in audios)

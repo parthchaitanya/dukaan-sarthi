@@ -60,9 +60,11 @@ def speakable(text: str, lang: str) -> str:
     s = text
     s = re.sub(r",?\s?\bC-[0-9A-F]{5}\b", "", s)  # pseudonymous IDs mean nothing when heard
     s = re.sub(r"[🙏✓→•]", "", s)
-    # ₹27.5 hazaar / ₹1.2 lakh (already short) -> "27.5 हज़ार रुपये"
+    # ₹27.5 hazaar / ₹1.2 lakh -> "27 हज़ार 500 रुपये": voices stumble on decimals ("27 दशमलव 5")
+    unit = {"lakh": 100_000, "लाख": 100_000, "hazaar": 1000, "हज़ार": 1000, "crore": 10_000_000, "करोड़": 10_000_000}
     s = re.sub(r"[−-]?₹\s?(\d+(?:\.\d+)?)\s*(lakh|लाख|hazaar|हज़ार|crore|करोड़)",
-               lambda m: f"{m.group(1)} {w[{'लाख': 'lakh', 'हज़ार': 'thousand', 'hazaar': 'thousand', 'करोड़': 'crore'}.get(m.group(2), m.group(2))]} {w['rupees']}", s)
+               lambda m: _amount_words(int(round(float(m.group(1)) * unit[m.group(2)] / 100) * 100), lang)
+               + " " + w["rupees"], s)
     # ₹1,95,665 -> "1 लाख 95 हज़ार 665 रुपये"
     s = re.sub(r"([−-])?₹\s?([\d,]+)(?:\.\d+)?",
                lambda m: (w["minus"] + " " if m.group(1) else "") + _amount_words(int(m.group(2).replace(",", "")), lang)

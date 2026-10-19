@@ -33,6 +33,9 @@ const S = {
   same_time_yday: { hinglish: "kal isi time tak", hi: "कल इसी समय तक", en: "by this time yesterday" },
   next_milestone: { hinglish: "Agla milestone", hi: "अगला पड़ाव", en: "Next milestone" },
   reset: { hinglish: "Reset", hi: "रीसेट", en: "Reset" },
+  voice: { hinglish: "Awaaz", hi: "आवाज़", en: "Voice" },
+  voice_auto: { hinglish: "Auto (sabse saaf)", hi: "अपने आप (सबसे साफ़)", en: "Auto (clearest)" },
+  voice_test: { hinglish: "Suno", hi: "सुनो", en: "Test" },
 
   ask_title: { hinglish: "Apni dukaan ke baare mein kuch bhi poochiye", hi: "अपनी दुकान के बारे में कुछ भी पूछिए", en: "Ask anything about your shop" },
   ask_placeholder: { hinglish: "Likhkar poochiye…", hi: "लिखकर पूछिए…", en: "Type a question…" },

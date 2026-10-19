@@ -105,7 +105,7 @@ function Answer({ m, lang }) {
           <button onClick={() => setOpen(!open)} aria-expanded={open} className="font-semibold text-sky-deep underline decoration-dotted underline-offset-4">
             {tr("how_answered", lang)}
           </button>
-          <span className="ml-auto text-xs text-muted">{m.engine === "claude" ? "Claude AI" : m.engine === "grok" ? "Grok AI" : tr("engine_rules", lang)}, {m.ms} ms</span>
+          <span className="ml-auto text-xs text-muted">{m.engine === "claude" ? "Claude AI" : m.engine === "groq" ? "Groq AI" : tr("engine_rules", lang)}, {m.ms} ms</span>
         </div>
       )}
       {open && (

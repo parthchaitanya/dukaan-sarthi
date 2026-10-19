@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, inr } from "../api.js";
 import { tr } from "../i18n.js";
-import { chime, speak, speakLines } from "../voice.js";
+import { chime, listVoices, preferredVoice, setPreferredVoice, speak, speakLines, usingServerVoice } from "../voice.js";
 import { H2, Icon, Loader, useData, Why } from "../components/common.jsx";
 import { HourBars } from "../components/charts.jsx";
 
@@ -108,6 +108,7 @@ function Brief({ b, lang, mid, go }) {
       <div className="rounded-2xl bg-sheet p-3"><HourBars hourly={b.hourly} peak={b.peak_hour_start} /></div>
 
       <Soundbox mid={mid} lang={lang} />
+      <VoicePicker lang={lang} />
     </div>
   );
 }
@@ -159,3 +160,29 @@ function Soundbox({ mid, lang }) {
 }
 
 export { inr };
+
+const SAMPLE = { hi: "नमस्ते, मैं हूँ आपका दुकान सारथी। कल की बिक्री 27 हज़ार 500 रुपये रही।",
+  en: "Hello, this is your Dukaan Sarthi. Yesterday you sold 27 thousand 500 rupees." };
+
+// Lets the shopkeeper (or presenter) choose the clearest voice installed on this device.
+function VoicePicker({ lang }) {
+  const vlang = lang === "en" ? "en" : "hi";
+  const [voices, setVoices] = useState([]);
+  const [pick, setPick] = useState(preferredVoice(vlang));
+  useEffect(() => { listVoices(vlang).then(setVoices); setPick(preferredVoice(vlang)); }, [vlang]);
+  if (usingServerVoice() || voices.length === 0) return null;
+  const change = (name) => { setPick(name); setPreferredVoice(vlang, name); speak(SAMPLE[vlang], vlang); };
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2 px-1 text-sm">
+      <label htmlFor="voice" className="font-semibold">{tr("voice", lang)}</label>
+      <select id="voice" value={pick} onChange={(e) => change(e.target.value)}
+        className="min-w-0 flex-1 rounded-full border-2 border-line bg-sheet px-3 py-1.5">
+        <option value="">{tr("voice_auto", lang)}</option>
+        {voices.map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
+      </select>
+      <button onClick={() => speak(SAMPLE[vlang], vlang)} className="rounded-full border-2 border-ink px-3 py-1 font-bold">
+        {tr("voice_test", lang)}
+      </button>
+    </div>
+  );
+}

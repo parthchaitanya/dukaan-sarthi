@@ -154,7 +154,7 @@ def soundbox_reset(merchant_id: str = "m1"):
 
 @app.post("/api/tts")
 def post_tts(body: TTSBody):
-    """Neural voice (Grok TTS) as MP3. 204 = server voice is off; the app then uses the browser's voice."""
+    """Neural voice (Sarvam Bulbul) as MP3. 204 = server voice is off; the app then uses the browser's voice."""
     try:
         data = tts.audio(body.text, body.lang)
     except llm.LLMError as e:

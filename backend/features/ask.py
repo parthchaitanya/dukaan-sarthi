@@ -295,21 +295,23 @@ def answer_claude(mid: str, q: str, lang: str) -> dict:
     raise llm.LLMError("Too many tool calls")
 
 
-# Grok uses the OpenAI tool format: {"type": "function", "function": {name, description, parameters}}
-GROK_TOOLS = [{"type": "function", "function": {"name": t["name"], "description": t["description"],
+# Groq uses the OpenAI tool format: {"type": "function", "function": {name, description, parameters}}
+OPENAI_TOOLS = [{"type": "function", "function": {"name": t["name"], "description": t["description"],
                                                 "parameters": t["input_schema"]}} for t in TOOLS]
 
 
-def answer_grok(mid: str, q: str, lang: str) -> dict:
+def answer_groq(mid: str, q: str, lang: str) -> dict:
     msgs = [{"role": "system", "content": _system(mid, lang)}, {"role": "user", "content": q}]
     sqls, data = [], []
     for _ in range(5):
-        resp = llm.grok_chat(msgs, GROK_TOOLS)
+        resp = llm.groq_chat(msgs, OPENAI_TOOLS)
         msg = resp["choices"][0]["message"]
         calls = msg.get("tool_calls") or []
         if not calls:
-            ans, spk = _split_speak(msg.get("content") or "")
-            return {"answer": ans, "speak_override": spk, "intent": "llm", "sql": sqls, "data": data, "engine": "grok"}
+            # some Groq models (Qwen) think out loud in <think> tags: keep only the answer
+            text = re.sub(r"<think>.*?</think>", "", msg.get("content") or "", flags=re.S)
+            ans, spk = _split_speak(text)
+            return {"answer": ans, "speak_override": spk, "intent": "llm", "sql": sqls, "data": data, "engine": "groq"}
         msgs.append({"role": "assistant", "content": msg.get("content") or "", "tool_calls": calls})
         for c in calls:
             try:
@@ -328,7 +330,7 @@ def ask(mid: str, q: str, lang: str = "hinglish") -> dict:
     prov = llm.provider()
     if prov:
         try:
-            out = answer_claude(mid, q, lang) if prov == "claude" else answer_grok(mid, q, lang)
+            out = answer_claude(mid, q, lang) if prov == "claude" else answer_groq(mid, q, lang)
         except Exception as e:
             out = answer_rules(mid, q, lang)
             out["engine"] = "rules (fallback)"

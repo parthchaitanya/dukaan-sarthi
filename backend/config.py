@@ -23,22 +23,25 @@ SEED = int(os.getenv("SEED", "42"))
 
 # LLM for open-ended Ask Anything questions. Without any key the built-in rule-based
 # router answers, so the demo never breaks.
-#   LLM_PROVIDER = auto (Claude if its key is set, else Grok if its key is set, else rules)
-#                | claude | grok | rules
+#   LLM_PROVIDER = auto (Groq if GROQ_API_KEY is set, else Claude if ANTHROPIC_API_KEY is set, else rules)
+#                | groq | claude | rules
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "auto").strip().lower()
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+GROQ_BASE_URL = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5-5")
-XAI_API_KEY = os.getenv("XAI_API_KEY", "").strip()
-XAI_BASE_URL = os.getenv("XAI_BASE_URL", "https://api.x.ai/v1")
-GROK_MODEL = os.getenv("GROK_MODEL", "grok-4.3")
-GROK_REASONING_EFFORT = os.getenv("GROK_REASONING_EFFORT", "").strip()  # none|low|medium|high; empty = model default
 LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "12"))
 
-# Voice output.
-#   TTS_PROVIDER = auto (Grok voice if XAI_API_KEY is set, else the browser's voice) | grok | browser
+# Voice output. Groq's only voice model is English-only, so Hindi/Hinglish speech uses
+# Sarvam AI's Bulbul (Indian voices) when its key is set, else the browser's voice.
+#   TTS_PROVIDER = auto | sarvam | browser
 TTS_PROVIDER = os.getenv("TTS_PROVIDER", "auto").strip().lower()
-GROK_TTS_VOICE = os.getenv("GROK_TTS_VOICE", "eve")
-GROK_TTS_SPEED = float(os.getenv("GROK_TTS_SPEED", "0.95"))
+SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "").strip()
+SARVAM_TTS_MODEL = os.getenv("SARVAM_TTS_MODEL", "bulbul:v4-flash")
+SARVAM_SPEAKER_HI = os.getenv("SARVAM_SPEAKER_HI", "shubh_enhi_ads")
+SARVAM_SPEAKER_EN = os.getenv("SARVAM_SPEAKER_EN", "shubh_en_narration")
+SARVAM_PACE = float(os.getenv("SARVAM_PACE", "0.95"))
 TTS_CACHE = Path(os.getenv("TTS_CACHE", ROOT / "data" / "tts_cache"))
 
 LANGS = ("hinglish", "hi", "en")

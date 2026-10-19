@@ -1,6 +1,6 @@
 // Offline support: cache the app shell, and keep the last good API answers so the
 // demo still opens if the venue Wi-Fi drops.
-const CACHE = "sarthi-v2";
+const CACHE = "sarthi-v3";
 const SHELL = ["/", "/assets/app.js", "/assets/app.css", "/manifest.webmanifest", "/icon.svg",
   "/Poppins-Regular.ttf", "/Poppins-Medium.ttf", "/Poppins-Bold.ttf"];
 

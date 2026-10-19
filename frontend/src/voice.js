@@ -1,6 +1,6 @@
 // Voice out and voice in.
 //
-// Voice out uses the server's neural voice (Grok TTS) when it's switched on, and the
+// Voice out uses the server's neural voice (Sarvam Bulbul) when it's switched on, and the
 // browser's own voice otherwise. The server already sends text written for speaking
 // (Hinglish is spoken from Hindi script, amounts as words), so here we only:
 //   * wait for the browser's voices to load (otherwise Chrome reads Hindi with an English voice),
@@ -14,7 +14,7 @@ let current = null;   // the playing <audio>
 export async function initVoice() {
   try {
     const h = await (await fetch("/api/health")).json();
-    serverTTS = h.tts === "grok";
+    serverTTS = !!h.tts && h.tts !== "browser";
   } catch { serverTTS = false; }
   return serverTTS;
 }
@@ -54,9 +54,23 @@ function score(v, want) {
   return s;
 }
 
+// The person can pick a voice themselves (saved per language); otherwise we pick the clearest.
+const PREF_KEY = (lang) => `sarthi.voice.${lang === "en" ? "en" : "hi"}`;
+export async function listVoices(lang) {
+  const want = BCP[lang] || "hi-IN";
+  if (!("speechSynthesis" in window)) return [];
+  return (await loadVoices()).filter((v) => score(v, want) >= 0).sort((a, b) => score(b, want) - score(a, want));
+}
+export function preferredVoice(lang) { try { return localStorage.getItem(PREF_KEY(lang)) || ""; } catch { return ""; } }
+export function setPreferredVoice(lang, name) {
+  try { name ? localStorage.setItem(PREF_KEY(lang), name) : localStorage.removeItem(PREF_KEY(lang)); } catch {}
+}
+
 async function bestVoice(lang) {
   const want = BCP[lang] || "hi-IN";
   const voices = await loadVoices();
+  const pick = preferredVoice(lang);
+  if (pick) { const v = voices.find((x) => x.name === pick); if (v) return v; }
   let best = null, bestS = -1;
   for (const v of voices) { const s = score(v, want); if (s > bestS) { best = v; bestS = s; } }
   return best;
@@ -76,7 +90,7 @@ function chunks(text) {
   return out;
 }
 
-// ---------- server voice (Grok TTS)
+// ---------- server voice (Sarvam Bulbul)
 const audioCache = new Map();
 function fetchAudio(text, lang) {
   const key = lang + "|" + text;

@@ -25,7 +25,7 @@ export default function Ask({ mid, lang }) {
     try {
       const r = await api.ask(mid, q, lang);
       setLog((l) => [...l, { role: "sarthi", ...r }]);
-      speak(r.answer, lang);
+      speak(r.speak || r.answer, r.speak_lang || lang);
     } catch (e) {
       setLog((l) => [...l, { role: "sarthi", answer: tr("error", lang), error: true }]);
     } finally { setBusy(false); }
@@ -99,13 +99,13 @@ function Answer({ m, lang }) {
       <p className={`text-[17px] leading-snug ${m.error ? "text-risk" : ""}`}>{m.answer}</p>
       {!m.error && (
         <div className="mt-2 flex items-center gap-4 text-sm">
-          <button onClick={() => speak(m.answer, lang)} className="flex items-center gap-1 font-semibold text-sky-deep">
+          <button onClick={() => speak(m.speak || m.answer, m.speak_lang || lang)} className="flex items-center gap-1 font-semibold text-sky-deep">
             <Icon name="speaker" className="h-4 w-4" />{tr("play", lang)}
           </button>
           <button onClick={() => setOpen(!open)} aria-expanded={open} className="font-semibold text-sky-deep underline decoration-dotted underline-offset-4">
             {tr("how_answered", lang)}
           </button>
-          <span className="ml-auto text-xs text-muted">{m.engine?.startsWith("claude") ? tr("engine_claude", lang) : tr("engine_rules", lang)}, {m.ms} ms</span>
+          <span className="ml-auto text-xs text-muted">{m.engine === "claude" ? "Claude AI" : m.engine === "grok" ? "Grok AI" : tr("engine_rules", lang)}, {m.ms} ms</span>
         </div>
       )}
       {open && (

@@ -43,7 +43,6 @@ const S = {
   thinking: { hinglish: "Dekh raha hoon…", hi: "देख रहा हूँ…", en: "Checking…" },
   how_answered: { hinglish: "Ye jawab kaise nikla", hi: "ये जवाब कैसे निकला", en: "How this was worked out" },
   engine_rules: { hinglish: "Offline engine", hi: "ऑफ़लाइन इंजन", en: "Offline engine" },
-  engine_claude: { hinglish: "Claude AI", hi: "Claude AI", en: "Claude AI" },
   suggestions: {
     hinglish: ["Pichle hafte kitna kamaya?", "Kaun se customer nahi aa rahe?", "Diwali pe kya stock rakhun?", "Loan mil sakta hai?", "Sabse zyada bheed kab hoti hai?"],
     hi: ["पिछले हफ़्ते कितना कमाया?", "कौन से ग्राहक नहीं आ रहे?", "दिवाली पर क्या स्टॉक रखूँ?", "क्या मुझे लोन मिलेगा?", "सबसे ज़्यादा भीड़ कब होती है?"],

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from .. import db
+from .. import db, speech
 
 MILESTONES = (25, 50, 75, 100, 150, 200, 250, 300)
 
@@ -34,19 +34,25 @@ def record_payment(mid: str, amount: float, lang: str = "hinglish") -> dict:
         con.commit()
     upto = ts[11:16]
     n, amt, y_n = _today_counts(mid, upto)
-    paid = {"hinglish": f"Paytm par {int(amount)} rupaye prapt hue.", "hi": f"पेटीएम पर {int(amount)} रुपये प्राप्त हुए।",
-            "en": f"Received {int(amount)} rupees on Paytm."}[lang]
-    nudge = None
-    if n in MILESTONES or n % 50 == 0:
-        diff = (n - y_n) / y_n if y_n else 0
-        if lang == "hi":
-            nudge = f"आज की {n}वीं बिक्री! " + (f"कल इसी समय से {abs(diff) * 100:.0f}% {'ज़्यादा' if diff >= 0 else 'कम'}।" if y_n else "")
-        elif lang == "en":
-            nudge = f"That's sale number {n} today! " + (f"{abs(diff) * 100:.0f}% {'ahead of' if diff >= 0 else 'behind'} this time yesterday." if y_n else "")
-        else:
-            nudge = f"Aaj ki {n}th sale! " + (f"Kal isi time se {abs(diff) * 100:.0f}% {'zyada' if diff >= 0 else 'kam'}." if y_n else "")
+    def lines(lg):
+        paid = {"hinglish": f"Paytm par {int(amount)} rupaye prapt hue.", "hi": f"पेटीएम पर {int(amount)} रुपये प्राप्त हुए।",
+                "en": f"Received {int(amount)} rupees on Paytm."}[lg]
+        nudge = None
+        if n in MILESTONES or n % 50 == 0:
+            diff = (n - y_n) / y_n if y_n else 0
+            if lg == "hi":
+                nudge = f"आज की {n}वीं बिक्री! " + (f"कल इसी समय से {abs(diff) * 100:.0f}% {'ज़्यादा' if diff >= 0 else 'कम'}।" if y_n else "")
+            elif lg == "en":
+                nudge = f"That's sale number {n} today! " + (f"{abs(diff) * 100:.0f}% {'ahead of' if diff >= 0 else 'behind'} this time yesterday." if y_n else "")
+            else:
+                nudge = f"Aaj ki {n}th sale! " + (f"Kal isi time se {abs(diff) * 100:.0f}% {'zyada' if diff >= 0 else 'kam'}." if y_n else "")
+        return paid, nudge
+
+    paid, nudge = lines(lang)
+    spoken = " ".join(x for x in lines("en" if lang == "en" else "hi") if x)
     return {"ts": ts, "count_today": n, "amount_today": round(amt), "yesterday_same_time": y_n,
-            "speak": paid + (" " + nudge if nudge else ""), "nudge": nudge,
+            "text": paid + (" " + nudge if nudge else ""), "nudge": nudge,
+            "speak": speech.speakable(spoken, "en" if lang == "en" else "hi"), "speak_lang": "en" if lang == "en" else "hi",
             "next_milestone": next((x for x in MILESTONES if x > n), n + 50 - n % 50)}
 
 

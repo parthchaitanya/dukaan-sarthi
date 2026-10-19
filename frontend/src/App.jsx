@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "./api.js";
 import { LANGS, tr } from "./i18n.js";
 import { Icon } from "./components/common.jsx";
+import { initVoice, stopAll } from "./voice.js";
 import Today from "./screens/Today.jsx";
 import Ask from "./screens/Ask.jsx";
 import Customers from "./screens/Customers.jsx";
@@ -31,7 +32,8 @@ export default function App() {
   useEffect(() => { api.merchants().then(setMerchants).catch(() => {}); }, []);
   useEffect(() => { write("sarthi.lang", lang); document.documentElement.lang = lang === "en" ? "en" : "hi"; }, [lang]);
   useEffect(() => { write("sarthi.mid", mid); }, [mid]);
-  useEffect(() => { window.scrollTo(0, 0); window.speechSynthesis?.cancel(); }, [tab]);
+  useEffect(() => { window.scrollTo(0, 0); stopAll(); }, [tab]);
+  useEffect(() => { initVoice(); }, []);
 
   if (tab === "metrics") return <Metrics />;
   const go = (k) => { location.hash = `#/${k}`; };

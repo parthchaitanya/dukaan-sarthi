@@ -21,9 +21,24 @@ DEMO_TODAY = date.fromisoformat(os.getenv("DEMO_TODAY", "2026-10-20"))
 HISTORY_DAYS = int(os.getenv("HISTORY_DAYS", "183"))  # ~6 months
 SEED = int(os.getenv("SEED", "42"))
 
-# LLM. Without a key the app uses its built-in rule-based router, so the demo never breaks.
+# LLM for open-ended Ask Anything questions. Without any key the built-in rule-based
+# router answers, so the demo never breaks.
+#   LLM_PROVIDER = auto (Claude if its key is set, else Grok if its key is set, else rules)
+#                | claude | grok | rules
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "auto").strip().lower()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5-5")
+XAI_API_KEY = os.getenv("XAI_API_KEY", "").strip()
+XAI_BASE_URL = os.getenv("XAI_BASE_URL", "https://api.x.ai/v1")
+GROK_MODEL = os.getenv("GROK_MODEL", "grok-4.3")
+GROK_REASONING_EFFORT = os.getenv("GROK_REASONING_EFFORT", "").strip()  # none|low|medium|high; empty = model default
 LLM_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "12"))
+
+# Voice output.
+#   TTS_PROVIDER = auto (Grok voice if XAI_API_KEY is set, else the browser's voice) | grok | browser
+TTS_PROVIDER = os.getenv("TTS_PROVIDER", "auto").strip().lower()
+GROK_TTS_VOICE = os.getenv("GROK_TTS_VOICE", "eve")
+GROK_TTS_SPEED = float(os.getenv("GROK_TTS_SPEED", "0.95"))
+TTS_CACHE = Path(os.getenv("TTS_CACHE", ROOT / "data" / "tts_cache"))
 
 LANGS = ("hinglish", "hi", "en")

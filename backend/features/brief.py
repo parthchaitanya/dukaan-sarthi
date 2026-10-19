@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import timedelta
 from functools import lru_cache
 
-from .. import db
+from .. import db, speech
 from ..i18n import first_name, date_label, day_name, festival_name, hour_range, hour_span, inr, inr_short, pct, t
 from . import cashflow, festival, winback
 
@@ -114,6 +114,10 @@ def brief(mid: str, lang: str = "hinglish") -> dict:
         "top_customers": top.to_dict("records"),
         "anomalies": anomalies, "actions": actions,
         "speech": " ".join(lines), "lines": lines,
+        # What the voice says, line by line (Hinglish is spoken from the Hindi version, so it's pronounced right).
+        "speak_lines": [speech.speakable(x, "en" if lang == "en" else "hi")
+                        for x in (brief(mid, "hi")["lines"] if lang == "hinglish" else lines)],
+        "speak_lang": "en" if lang == "en" else "hi",
         "festival_next": fp["upcoming"][0] if fp["upcoming"] else None,
     }
 

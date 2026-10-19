@@ -28,7 +28,7 @@ function Brief({ b, lang, mid, go }) {
   const toggle = () => {
     if (playing) { stopRef.current?.(); setLine(-1); return; }
     setLine(0);
-    stopRef.current = speakLines(b.lines, lang, { onLine: setLine, onEnd: () => setLine(-1) });
+    stopRef.current = speakLines(b.speak_lines || b.lines, b.speak_lang || lang, { onLine: setLine, onEnd: () => setLine(-1) });
   };
   const ch = b.change_vs_last_week;
   const up = ch >= 0;
@@ -124,7 +124,7 @@ function Soundbox({ mid, lang }) {
       chime();
       const r = await api.pay(mid, amt, lang);
       setLast(r);
-      setTimeout(() => speak(r.speak, lang), 450);
+      setTimeout(() => speak(r.speak, r.speak_lang || lang), 450);
       st.reload();
     } finally { setBusy(false); }
   };
@@ -148,7 +148,7 @@ function Soundbox({ mid, lang }) {
         )}
         {last && (
           <p className="mt-3 rounded-xl bg-white/10 p-3 text-[16px] leading-snug" aria-live="polite">
-            <Icon name="speaker" className="mr-2 inline h-5 w-5 text-sky" />{last.speak}
+            <Icon name="speaker" className="mr-2 inline h-5 w-5 text-sky" />{last.text || last.speak}
           </p>
         )}
         <button onClick={async () => { await api.resetSoundbox(mid); setLast(null); st.reload(); }}

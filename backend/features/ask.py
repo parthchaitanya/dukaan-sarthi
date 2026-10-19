@@ -14,7 +14,7 @@ import time
 from calendar import monthrange
 from datetime import date, timedelta
 
-from .. import config, db, llm, sqlguard
+from .. import config, db, llm, speech, sqlguard
 from ..i18n import day_name, festival_name, hour_range, inr, inr_short
 from . import cashflow, festival, recon, winback
 
@@ -243,39 +243,81 @@ def _tool(mid, name, args, lang):
     raise ValueError(name)
 
 
-def answer_claude(mid: str, q: str, lang: str) -> dict:
+def _system(mid: str, lang: str) -> str:
     m = db.merchant(mid)
-    system = (
+    speak_rule = ("After the answer, add one final line that starts with 'SPEAK:' and repeats the same answer in "
+                  "simple Hindi written in Devanagari script, with amounts as words (e.g. '1 लाख 95 हज़ार रुपये'), "
+                  "so a Hindi voice can read it aloud. " if lang == "hinglish" else "")
+    return (
         f"You are Dukaan Sarthi, a business copilot for {m['name']}, a small {m['category']} shop in {m['city']}, India. "
         f"{LANG_RULE[lang]} Answer in at most 3 short sentences that sound natural when spoken aloud. "
         "Always use the tools to get numbers. Never invent figures. Use ₹ with Indian digit grouping. "
         "Customer IDs (like C-1A2B3) are pseudonymous: never try to identify a person. "
-        "If a question is outside the shop's data, say so briefly.\n\n"
+        "If a question is outside the shop's data, say so briefly. " + speak_rule + "\n\n"
         + sqlguard.SCHEMA_DOC.format(today=db.today().isoformat()))
+
+
+def _split_speak(text: str) -> tuple[str, str | None]:
+    """Separate the optional 'SPEAK:' line (Devanagari version for the voice) from the answer."""
+    if "SPEAK:" in text:
+        ans, spk = text.split("SPEAK:", 1)
+        return ans.strip(), spk.strip()
+    return text.strip(), None
+
+
+def _run_tool(mid, name, args, lang, sqls, data):
+    try:
+        out = _tool(mid, name, args, lang)
+        sqls.append(out["sql"] if name == "run_sql" else f"-- tool: {name}")
+        data.append({"tool": name, "result": out})
+        return json.dumps(out, default=str)[:6000], False
+    except Exception as e:  # guard errors go back to the model so it can fix the query
+        return str(e), True
+
+
+def answer_claude(mid: str, q: str, lang: str) -> dict:
+    system = _system(mid, lang)
     msgs = [{"role": "user", "content": q}]
     sqls, data = [], []
     for _ in range(5):
         resp = llm.create(system, msgs, TOOLS)
         if resp.get("stop_reason") != "tool_use":
-            text = "".join(b.get("text", "") for b in resp["content"] if b["type"] == "text").strip()
-            return {"answer": text, "intent": "llm", "sql": sqls, "data": data, "engine": "claude"}
+            text = "".join(b.get("text", "") for b in resp["content"] if b["type"] == "text")
+            ans, spk = _split_speak(text)
+            return {"answer": ans, "speak_override": spk, "intent": "llm", "sql": sqls, "data": data, "engine": "claude"}
         msgs.append({"role": "assistant", "content": resp["content"]})
         results = []
         for b in resp["content"]:
-            if b["type"] != "tool_use":
-                continue
-            try:
-                out = _tool(mid, b["name"], b.get("input", {}), lang)
-                if b["name"] == "run_sql":
-                    sqls.append(out["sql"])
-                else:
-                    sqls.append(f"-- tool: {b['name']}")
-                data.append({"tool": b["name"], "result": out})
-                content, err = json.dumps(out, default=str)[:6000], False
-            except Exception as e:  # guard errors go back to the model so it can fix the query
-                content, err = str(e), True
-            results.append({"type": "tool_result", "tool_use_id": b["id"], "content": content, "is_error": err})
+            if b["type"] == "tool_use":
+                content, err = _run_tool(mid, b["name"], b.get("input", {}), lang, sqls, data)
+                results.append({"type": "tool_result", "tool_use_id": b["id"], "content": content, "is_error": err})
         msgs.append({"role": "user", "content": results})
+    raise llm.LLMError("Too many tool calls")
+
+
+# Grok uses the OpenAI tool format: {"type": "function", "function": {name, description, parameters}}
+GROK_TOOLS = [{"type": "function", "function": {"name": t["name"], "description": t["description"],
+                                                "parameters": t["input_schema"]}} for t in TOOLS]
+
+
+def answer_grok(mid: str, q: str, lang: str) -> dict:
+    msgs = [{"role": "system", "content": _system(mid, lang)}, {"role": "user", "content": q}]
+    sqls, data = [], []
+    for _ in range(5):
+        resp = llm.grok_chat(msgs, GROK_TOOLS)
+        msg = resp["choices"][0]["message"]
+        calls = msg.get("tool_calls") or []
+        if not calls:
+            ans, spk = _split_speak(msg.get("content") or "")
+            return {"answer": ans, "speak_override": spk, "intent": "llm", "sql": sqls, "data": data, "engine": "grok"}
+        msgs.append({"role": "assistant", "content": msg.get("content") or "", "tool_calls": calls})
+        for c in calls:
+            try:
+                args = json.loads(c["function"].get("arguments") or "{}")
+            except json.JSONDecodeError:
+                args = {}
+            content, err = _run_tool(mid, c["function"]["name"], args, lang, sqls, data)
+            msgs.append({"role": "tool", "tool_call_id": c["id"], "content": ("ERROR: " if err else "") + content})
     raise llm.LLMError("Too many tool calls")
 
 
@@ -283,15 +325,25 @@ def ask(mid: str, q: str, lang: str = "hinglish") -> dict:
     lang = lang if lang in config.LANGS else "hinglish"
     t0 = time.perf_counter()
     out = None
-    if llm.enabled():
+    prov = llm.provider()
+    if prov:
         try:
-            out = answer_claude(mid, q, lang)
+            out = answer_claude(mid, q, lang) if prov == "claude" else answer_grok(mid, q, lang)
         except Exception as e:
             out = answer_rules(mid, q, lang)
             out["engine"] = "rules (fallback)"
             out["fallback_reason"] = str(e)[:200]
     if out is None:
         out = answer_rules(mid, q, lang)
+    # What the voice says: Hinglish is spoken from Hindi (Devanagari) so Hindi voices pronounce it right.
+    spoken = out.pop("speak_override", None)
+    if not spoken and lang == "hinglish" and out["engine"].startswith("rules"):
+        try:
+            spoken = answer_rules(mid, q, "hi")["answer"]
+        except Exception:
+            spoken = None
+    out["speak"] = speech.speakable(spoken or out["answer"], "en" if lang == "en" else "hi")
+    out["speak_lang"] = "en" if lang == "en" else "hi"
     out["ms"] = round((time.perf_counter() - t0) * 1000)
     out["question"] = q
     out["lang"] = lang

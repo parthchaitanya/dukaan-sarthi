@@ -20,7 +20,11 @@ Then open **http://localhost:8000** (use Chrome on a phone or desktop for voice 
 
 `run.sh` installs the requirements, generates the synthetic data (`python -m backend.seed`), computes the metrics (`python -m backend.metrics`) and starts the server.
 
-**Optional: Claude for open-ended questions.** Copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY`. Without a key, Ask Anything uses the built-in offline engine, which handles the common questions in all three languages. If the API is slow or unreachable, the app falls back to that engine automatically.
+**Optional: Grok or Claude for open-ended questions, and Grok's neural voice.** Copy `.env.example` to `.env`:
+
+- `XAI_API_KEY=...` turns on Grok (`grok-4.3`) for Ask Anything **and** Grok's neural voice (`/v1/tts`, Hindi and English) for everything the app says. Before presenting, run `python -m backend.tts warm` once: it caches the demo's audio in `data/tts_cache/`, so it plays instantly and still works offline.
+- `ANTHROPIC_API_KEY=...` turns on Claude instead. If both keys are set, pick one with `LLM_PROVIDER=grok` or `LLM_PROVIDER=claude`.
+- With no key, the built-in offline engine answers the common questions in all three languages, and the browser's voice speaks. If an API is slow or unreachable, the app falls back automatically.
 
 **Docker:** `docker build -t dukaan-sarthi . && docker run -p 8000:8000 dukaan-sarthi`
 
@@ -56,7 +60,9 @@ backend/
   main.py            FastAPI app: /api/* plus the PWA
   seed.py            synthetic data generator (5 personas, ground truth in _truth_* tables)
   sqlguard.py        read-only, merchant-scoped SQL for the LLM
-  llm.py             minimal Claude Messages API client (stdlib only)
+  llm.py             Claude + Grok (xAI) clients, stdlib only
+  speech.py          turns screen text into clearly speakable text
+  tts.py             Grok neural voice with an offline disk cache
   i18n.py            Hinglish / Hindi / English templates, ₹ formatting
   metrics.py         evaluation behind /metrics
   calendar_data.py   2026 festival calendar + category priors
@@ -73,7 +79,7 @@ To change the UI: `cd frontend && npm install && npm run build` (or `npm run dev
 - All data is synthetic. Festival dates are real 2026 dates, and the category uplift priors are assumptions.
 - The demo runs on a fixed date (20 Oct 2026, Dussehra) so the story is the same every time. Change it with `DEMO_TODAY`.
 - The credit score and limit are indicative only. A real lending decision belongs to Paytm's lending partner.
-- Voice input uses the browser's Web Speech API (best in Chrome). Voice output uses the browser's Hindi/English voices.
+- Voice input uses the browser's Web Speech API (best in Chrome). Voice output uses Grok's neural voice when `XAI_API_KEY` is set, otherwise the clearest Hindi/English voice installed in the browser. Hinglish is spoken from its Hindi-script version and amounts are read as words, so Hindi voices pronounce them correctly (`backend/speech.py`).
 - Poppins font © Indian Type Foundry, SIL Open Font License 1.1, self-hosted so the app works offline.
 
 See [docs/architecture.md](docs/architecture.md) for the flow, privacy and scaling design.

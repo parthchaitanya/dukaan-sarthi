@@ -174,3 +174,18 @@ def first_name(owner: str, lang: str) -> str:
 def t(key: str, lang: str, **kw) -> str:
     lang = lang if lang in ("hinglish", "hi", "en") else "hinglish"
     return T[key][lang].format(**kw)
+
+
+# Same suggestion chips as the app (frontend/src/i18n.js); used to pre-warm voice audio.
+SUGGESTIONS = {
+    "hinglish": ["Pichle hafte kitna kamaya?", "Kaun se customer nahi aa rahe?", "Diwali pe kya stock rakhun?",
+                 "Loan mil sakta hai?", "Sabse zyada bheed kab hoti hai?"],
+    "hi": ["पिछले हफ़्ते कितना कमाया?", "कौन से ग्राहक नहीं आ रहे?", "दिवाली पर क्या स्टॉक रखूँ?", "क्या मुझे लोन मिलेगा?",
+           "सबसे ज़्यादा भीड़ कब होती है?"],
+    "en": ["How much did I make last week?", "Which customers stopped coming?", "What should I stock for Diwali?",
+           "Can I get a loan?", "When is my shop busiest?"],
+}
+
+
+def tr_suggestions(lang: str) -> list[str]:
+    return SUGGESTIONS.get(lang, SUGGESTIONS["hinglish"])

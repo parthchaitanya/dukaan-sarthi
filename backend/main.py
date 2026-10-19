@@ -8,11 +8,11 @@ import warnings
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import config, db, llm, metrics
+from . import config, db, llm, metrics, tts
 from .features import ask as ask_mod
 from .features import brief as brief_mod
 from .features import cashflow, festival, nudges, recon, winback
@@ -45,6 +45,11 @@ class PaymentBody(BaseModel):
     lang: str = "hinglish"
 
 
+class TTSBody(BaseModel):
+    text: str
+    lang: str = "hi"
+
+
 class CampaignBody(BaseModel):
     merchant_id: str = "m1"
     lang: str = "hinglish"
@@ -56,7 +61,7 @@ class CampaignBody(BaseModel):
 @app.get("/api/health")
 def health():
     return {"ok": True, "demo_today": config.DEMO_TODAY.isoformat(),
-            "llm": "claude" if llm.enabled() else "rules (offline)", "model": config.ANTHROPIC_MODEL if llm.enabled() else None}
+            "llm": llm.provider() or "rules (offline)", "model": llm.model_name(), "tts": tts.provider()}
 
 
 @app.get("/api/merchants")
@@ -145,6 +150,18 @@ def soundbox_reset(merchant_id: str = "m1"):
     _check(merchant_id)
     nudges.reset_live(merchant_id)
     return {"ok": True}
+
+
+@app.post("/api/tts")
+def post_tts(body: TTSBody):
+    """Neural voice (Grok TTS) as MP3. 204 = server voice is off; the app then uses the browser's voice."""
+    try:
+        data = tts.audio(body.text, body.lang)
+    except llm.LLMError as e:
+        raise HTTPException(502, f"Voice service failed: {e}")
+    if data is None:
+        return Response(status_code=204)
+    return Response(content=data, media_type="audio/mpeg", headers={"Cache-Control": "public, max-age=86400"})
 
 
 @app.get("/api/metrics")

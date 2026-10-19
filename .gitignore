@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+data/*.db
+data/metrics.json
+frontend/node_modules/
+.env

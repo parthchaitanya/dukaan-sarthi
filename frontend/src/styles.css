@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/* Poppins (OFL) covers Latin and Devanagari and is self-hosted so the app works offline. */
+@font-face { font-family: "Poppins"; src: url("/Poppins-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Poppins"; src: url("/Poppins-Medium.ttf") format("truetype"); font-weight: 500 600; font-display: swap; }
+@font-face { font-family: "Poppins"; src: url("/Poppins-Bold.ttf") format("truetype"); font-weight: 700 900; font-display: swap; }
+
+@theme {
+  --font-sans: "Poppins", "Noto Sans Devanagari", system-ui, sans-serif;
+  --color-ink: #0E2A47;
+  --color-ink-2: #1B3F66;
+  --color-sky: #00B9F1;
+  --color-sky-deep: #0068B3;
+  --color-paper: #EEF3F7;
+  --color-sheet: #FBFDFE;
+  --color-line: #D6E0E9;
+  --color-muted: #5A6B7E;
+  --color-marigold: #F2A900;
+  --color-marigold-soft: #FFF3D1;
+  --color-risk: #C8372D;
+  --color-risk-soft: #FBE7E5;
+  --color-good: #1F7A52;
+  --color-good-soft: #E2F3EA;
+}
+
+html, body { background: var(--color-paper); color: var(--color-ink); }
+body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+:focus-visible { outline: 3px solid var(--color-sky); outline-offset: 2px; border-radius: 8px; }
+button { cursor: pointer; }
+
+/* the Soundbox grille on the brief card */
+.grille {
+  background-image: radial-gradient(circle, rgba(0, 185, 241, 0.35) 2px, transparent 2.5px);
+  background-size: 14px 14px;
+}
+.speaking-line { transition: color 200ms ease, opacity 200ms ease; }
+
+@keyframes pulse-ring { 0% { transform: scale(1); opacity: .55 } 100% { transform: scale(1.6); opacity: 0 } }
+.ring::after {
+  content: ""; position: absolute; inset: 0; border-radius: 9999px; background: currentColor;
+  animation: pulse-ring 1.2s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ring::after { animation: none; }
+  .speaking-line { transition: none; }
+}

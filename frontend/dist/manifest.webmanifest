@@ -1,0 +1,10 @@
+{
+  "name": "Dukaan Sarthi",
+  "short_name": "Sarthi",
+  "description": "Aapki dukaan, aapka Sarthi. Voice-first business copilot for Paytm merchants.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EEF3F7",
+  "theme_color": "#0E2A47",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

@@ -6,9 +6,11 @@ services:
     name: dukaan-sarthi
     runtime: docker
     dockerfilePath: ./Dockerfile
-    # The app needs ~190 MB idle plus spikes while crunching ~83k payments.
-    # Starter (512 MB) is the safe minimum; the free tier (512 MB / 0.1 CPU) is too slow.
-    plan: starter
+    # Free instance type: no credit card required (512 MB / 0.1 CPU).
+    # It sleeps after ~15 min idle, so the first request wakes it in ~50s.
+    # The app needs ~190 MB idle; switch to starter or standard for always-on
+    # and faster on-request segmentation, if a card is available later.
+    plan: free
     # Closest region to India for lower voice/text latency.
     region: singapore
     healthCheckPath: /api/health

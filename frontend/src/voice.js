@@ -20,8 +20,13 @@ export async function initVoice() {
 }
 export const usingServerVoice = () => !!serverTTS;
 
-export const canListen = () => typeof window !== "undefined" &&
-  ("webkitSpeechRecognition" in window || "SpeechRecognition" in window);
+export const canListen = () => {
+  if (typeof window === "undefined") return false;
+  const hasAPI = "webkitSpeechRecognition" in window || "SpeechRecognition" in window;
+  // Chrome only allows mic on localhost or https
+  const isSecure = location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.protocol === "https:";
+  return hasAPI && isSecure;
+};
 export const canSpeak = () => typeof window !== "undefined" && ("speechSynthesis" in window || serverTTS);
 
 // ---------- browser voices
@@ -45,7 +50,7 @@ function score(v, want) {
   if (v.lang === want) s += 100;
   else if (v.lang?.toLowerCase().startsWith(want.slice(0, 2))) s += 60;
   else return -1;
-  const n = v.name.toLowerCase();
+  const n = (v.name || "").toLowerCase();
   if (/natural|neural|online/.test(n)) s += 40;      // Edge: "Microsoft Swara Online (Natural)"
   if (/google/.test(n)) s += 30;                      // Chrome: "Google हिन्दी"
   if (/premium|enhanced/.test(n)) s += 25;            // macOS downloaded voices
@@ -179,15 +184,37 @@ export function listen(lang, { onResult, onError, onEnd }) {
   const r = new Rec();
   r.lang = BCP[lang] || "hi-IN";
   r.interimResults = true;
+  r.continuous = false; // Stop automatically when the user stops talking
   r.maxAlternatives = 1;
+
   r.onresult = (e) => {
-    const res = e.results[e.results.length - 1];
-    onResult?.(res[0].transcript, res.isFinal);
+    let transcript = "";
+    for (let i = 0; i < e.results.length; i++) {
+      transcript += e.results[i][0].transcript;
+    }
+    const isFinal = e.results[e.results.length - 1].isFinal;
+    onResult?.(transcript, isFinal);
   };
-  r.onerror = (e) => onError?.(e.error);
-  r.onend = () => onEnd?.();
-  r.start();
-  return () => r.stop();
+
+  r.onerror = (e) => {
+    console.error("SpeechRecognition error:", e.error);
+    onError?.(e.error);
+  };
+
+  r.onend = () => {
+    onEnd?.();
+  };
+
+  try {
+    r.start();
+  } catch (err) {
+    console.error("SpeechRecognition start failed:", err);
+    onError?.("start-failed");
+  }
+
+  return () => {
+    try { r.stop(); } catch {}
+  };
 }
 
 // A short two-note chime, like a Soundbox before it announces a payment.

@@ -1,0 +1,33 @@
+# Render Blueprint for Dukaan Sarthi.
+# Deploy: push this repo to GitHub, then in Render choose
+# New + -> Blueprint -> pick the repo. Render reads this file.
+services:
+  - type: web
+    name: dukaan-sarthi
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # The app needs ~190 MB idle plus spikes while crunching ~83k payments.
+    # Starter (512 MB) is the safe minimum; the free tier (512 MB / 0.1 CPU) is too slow.
+    plan: starter
+    # Closest region to India for lower voice/text latency.
+    region: singapore
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # Secrets: sync:false means Render prompts for the value and stores it,
+      # so keys are never committed to the repo.
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false
+      # Model that works with the Groq key in use (llama-3.3-70b-versatile is
+      # not available to every key; openai/gpt-oss-120b supports tool calling).
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      - key: LLM_PROVIDER
+        value: auto
+      - key: TTS_PROVIDER
+        value: auto
+      # Fixed demo date so the story is identical every time it is shown.
+      - key: DEMO_TODAY
+        value: 2026-10-20

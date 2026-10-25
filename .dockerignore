@@ -1,0 +1,26 @@
+# Never ship secrets or local state into the build context / image
+.env
+
+# Large or unnecessary for the runtime image (the Dockerfile copies only
+# requirements.txt, backend/ and frontend/dist/)
+.git
+.gitignore
+__pycache__/
+*.pyc
+.venv/
+venv/
+frontend/node_modules/
+frontend/src/
+frontend/public/
+frontend/build.mjs
+frontend/package.json
+frontend/package-lock.json
+frontend/index.html
+tests/
+docs/
+data/*.db
+data/metrics.json
+data/tts_cache/
+run.sh
+run.bat
+README.md

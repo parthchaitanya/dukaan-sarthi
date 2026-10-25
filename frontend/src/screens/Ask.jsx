@@ -36,11 +36,27 @@ export default function Ask({ mid, lang }) {
     if (!canListen()) { setNote(tr("no_mic", lang)); return; }
     setNote(null);
     setHearing(true);
-    let finalText = "";
+    let lastTranscript = "";
     stopRef.current = listen(lang, {
-      onResult: (t, isFinal) => { setText(t); if (isFinal) finalText = t; },
-      onError: () => setHearing(false),
-      onEnd: () => { setHearing(false); if (finalText) askQ(finalText); },
+      onResult: (t, isFinal) => {
+        setText(t);
+        lastTranscript = t;
+      },
+      onError: (err) => {
+        setHearing(false);
+        if (err === "not-allowed") setNote(tr("mic_denied", lang));
+        else if (err === "network") setNote(tr("mic_network", lang));
+        else if (err === "no-speech") setNote(tr("mic_no_speech", lang));
+        else setNote(tr("mic_error", lang) + (err ? `: ${err}` : ""));
+      },
+      onEnd: () => {
+        setHearing(false);
+        if (lastTranscript.trim()) {
+          askQ(lastTranscript);
+        } else {
+          setNote(tr("mic_no_speech", lang));
+        }
+      },
     });
   };
 
